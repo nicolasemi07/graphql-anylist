@@ -1,6 +1,6 @@
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { UpdateUserInput } from './dto/update-user.input';
@@ -30,8 +30,24 @@ export class UsersService {
     return [];
   }
 
-  async findOne(id: string): Promise<User> {
-    throw new Error("Sin implementar");
+  async findOneById(id: string): Promise<User> {
+    try {
+      return await this.usersRepository.findOneByOrFail({ id });
+    } catch (error) {
+      throw new NotFoundException(`${id} not found!`);
+    }
+  }
+
+  async findOneByEmail(email: string): Promise<User> {
+    try {
+      return await this.usersRepository.findOneByOrFail({ email });
+    } catch (error) {
+      throw new NotFoundException(`${email} not found!`);
+      // this.handleDbErrors({
+      //   code: 'error-001',
+      //   detail: `${email} not found!`
+      // });
+    }
   }
 
   async update(id: string, updateUserInput: UpdateUserInput): Promise<User> {
@@ -47,6 +63,10 @@ export class UsersService {
     if (error.code === '23505') {
       throw new BadRequestException(error.detail.replace('Key ', ''));
     }
+
+    // if (error.code === 'error-001') {
+    //   throw new BadRequestException(error.detail);
+    // }
 
     this.logger.error(error);
 
